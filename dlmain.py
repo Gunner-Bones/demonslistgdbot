@@ -1,10 +1,10 @@
-import socket, sys, os, ast
-import urllib.request as urlr
+import socket, sys, os, ast, urllib.request, urllib.parse, json
 
 try:
     tf = open("dlpass.txt","r")
     tf.close()
 except:
+    tf.close()
     print("[ERROR] There needs to be a file called 'dlpass.txt' in order for the bot to run! Format:")
     print("CHANNEL=<channel to connect to>")
     print("NICK=<bot username to use>")
@@ -39,8 +39,8 @@ print(NICK + "[Info] Channel: " + CHANNEL + ", PORT: " + str(PORT))
 # MODERATORS
 MODS = []
 ccl = "http://tmi.twitch.tv/group/user/" + CHANNEL + "/chatters"
-ccl = urlr.Request(ccl, headers={'User-Agent': 'Mozilla/5.0'})
-ccl = str(urlr.urlopen(ccl).read())
+ccl = urllib.request.Request(ccl, headers={'User-Agent': 'Mozilla/5.0'})
+ccl = str(urllib.request.urlopen(ccl).read())
 ccmi = ccl.index("\"moderators\": ")
 ccbi = ccl.index("]")
 ccl = ccl[ccmi + 15:ccbi]
@@ -60,6 +60,7 @@ try:
     st = open("dlauth.txt","r")
     st.close()
 except:
+    st.close()
     print("[ERROR] A settings file needs to be put with the program called 'dlauth.txt' for Authorizations"
           " to be stored. Authorizations will only persist for this session now.")
     HASSETTINGS = False
@@ -76,8 +77,8 @@ def Send_message(message,username,iswhisper):
         s.send(("PRIVMSG #" + CHANNEL + " :" + message + "\r\n").encode("UTF-8"))
         print(NICK + "[Send Message] " + message)
     else:
-        s.send(("PRIVMSG #" + CHANNEL + " :/w " + username + " " + message + "\r\n").encode("UTF-8"))
-        print(NICK + "[Send Whisper] " + message)
+        s.send(("PRIVMSG #" + CHANNEL + " :/w " + username + " [" + CHANNEL + "] " + message + "\r\n").encode("UTF-8"))
+        print(NICK + "[Send Whisper](Channel: " + CHANNEL + ") " + message)
 
 def settings(method,name,data="",file=SETTINGSFILE):
     """
@@ -141,6 +142,46 @@ def getdlmodtoken(user):
         if m['name'] == user:
             return m['access token']
     return None
+
+def GET(url,headers=None):
+    baseurl = "https://pointercrate.com/api/v1/" + url
+    rq = None
+    if headers != None: rq = urllib.request.Request(baseurl,headers=({'User-Agent': 'Mozilla/5.0'},headers))
+    else: rq = urllib.request.Request(baseurl)
+    try:
+        rq = str(urllib.request.urlopen(rq).read())
+    except Exception as e:
+        print(e)
+        return None
+    json.loads(rq)
+    return rq
+
+def POST(url,params,headers=None):
+    baseurl = "https://pointercrate.com/api/v1/" + url
+    rq = urllib.parse.urlencode(params)
+    if headers != None: rq = urllib.request.Request(baseurl,rq,headers=({'User-Agent': 'Mozilla/5.0'},headers))
+    else: rq = urllib.request.Request(baseurl,rq,headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        rq = str(urllib.request.urlopen(rq).read())
+    except Exception as e:
+        print(e)
+        return None
+    json.loads(rq)
+    return rq
+
+def formatREQUESTforTM(rqm):
+    rqm = str(rqm)
+    if len(rqm) > 50:
+        rqm = rqm[:50]
+    return rqm
+
+def dltokenheader(user):
+    global DLMODS
+    for m in DLMODS:
+        if m['name'] == user:
+            return {'Authorization':'Bearer ' + m['access token']}
+    return None
+
 
 print()
 while True:
@@ -208,6 +249,19 @@ while True:
                                     dls = ""
                                     if not HASSETTINGS: dls = " for this session"
                                     Send_message(username + ", removed Access Token from " + am[1] + dls, username,messagewhisper)
+                    if message.startswith(">>directGET"):
+                        if username not in MODS and username not in DLMODS:
+                            Send_message(username + ", you do not have permissions to do this!",username,messagewhisper)
+                        else:
+                            dm = message.split(" ")
+                            if len(dm) != 2:
+                                Send_message(username + ", invalid syntax! Usage: >>directGET <url>",username,messagewhisper)
+                            else:
+                                dmr = GET(dm[1])
+                                if dmr == None:
+                                    Send_message(username + ", bad response! Check your url and see console", username,messagewhisper)
+                                else:
+                                    Send_message(username + ", " + formatREQUESTforTM(dmr), username,messagewhisper)
                 for l in parts:
                     if "End of /NAMES list" in l:
                         MODT = True
