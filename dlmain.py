@@ -334,129 +334,151 @@ while True:
                             Send_message(username + ", you do not have permissions to do this!", username,
                                          messagewhisper)
                         else:
-                            if message == ">>newdemon":
-                                Send_message("Usage: >>newdemon name;pos;requirement;verifier;publisher;"
-                                             "[creator1,creator2];video",username,messagewhisper)
-                            else:
-                                tm = message.replace(">>newdemon ","")
-                                tm = tm.split(";")
-                                if len(tm) != 7:
-                                    Send_message(username + ", Invalid Syntax! Usage: >>newdemon name;pos;requirement;"
-                                                            "verifier;publisher;[creator1,creator2];video", username,
-                                                            messagewhisper)
+                            cmdpass = False
+                            if MODSONLY:
+                                if username not in MODS:
+                                    if username not in MODS and not userindlmods(username):
+                                        Send_message(username + ", you do not have permissions to do this!", username,
+                                                     messagewhisper)
                                 else:
-                                    DLTOKEN = ""
-                                    for d in DLMODS:
-                                        if d['name'] == username:
-                                            DLTOKEN = d['access token']
-                                    ndvalid = True
-                                    NDNAME = tm[0]
-                                    NDPOS = 0
-                                    try:
-                                        NDPOS = int(tm[1])
-                                    except:
-                                        ndvalid = False
-                                        Send_message(
-                                            username + ", Invalid Position! Usage: >>newdemon name;pos;requirement;"
-                                                       "verifier;publisher;[creator1,creator2];video", username,
-                                            messagewhisper)
-                                    NDREQUIREMENT = 0
-                                    try:
-                                        NDREQUIREMENT = int(tm[2])
-                                    except:
-                                        ndvalid = False
-                                        Send_message(
-                                            username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
-                                                       "verifier;publisher;[creator1,creator2];video", username,
-                                            messagewhisper)
-                                    if NDREQUIREMENT < 1 or NDREQUIREMENT > 99:
-                                        ndvalid = False
-                                        Send_message(
-                                            username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
-                                                       "verifier;publisher;[creator1,creator2];video", username,
-                                            messagewhisper)
-                                    NDVERIFIER = tm[3]
-                                    NDPUBLISHER = tm[4]
-                                    NDCREATORS = tm[5]
-                                    if NDCREATORS[0] != "[" or NDCREATORS[len(NDCREATORS) - 1] != "]":
-                                        ndvalid = False
-                                        Send_message(
-                                            username + ", Invalid Creators! Usage: >>newdemon name;pos;requirement;"
-                                                       "verifier;publisher;[creator1,creator2];video", username,
-                                            messagewhisper)
-                                    NDCREATORS = NDCREATORS.replace("[",""); NDCREATORS = NDCREATORS.replace("]","")
-                                    NDCREATORS = NDCREATORS.split(",")
-                                    NDVIDEO = tm[6]
-                                    if not NDVIDEO.startswith("https://www.youtube.com/"):
-                                        ndvalid = False
-                                        Send_message(
-                                            username + ", Invalid Video! Usage: >>newdemon name;pos;requirement;"
-                                                       "verifier;publisher;[creator1,creator2];video", username,
-                                            messagewhisper)
-                                    if ndvalid:
-                                        ndr = POST("demons/",data={'name':NDNAME,'position':NDPOS,
-                                        'requirement':NDREQUIREMENT,'verifier':NDVERIFIER,'publisher':NDPUBLISHER,
-                                        'creators':NDCREATORS,'video':NDVIDEO},headers={'Authorization':'Bearer ' +
-                                                                                                        DLTOKEN})
-                                        if ndr is None or ndr == []:
-                                            Send_message(username + ", Invalid Request!",username,messagewhisper)
-                                        else:
-                                            Send_message(username + ", added demon " + NDNAME + "!",username,
-                                                         messagewhisper)
+                                    cmdpass = True
+                            else:
+                                cmdpass = True
+                            if cmdpass:
+                                if message == ">>newdemon":
+                                    Send_message("Usage: >>newdemon name;pos;requirement;verifier;publisher;"
+                                                 "[creator1,creator2];video",username,messagewhisper)
+                                else:
+                                    tm = message.replace(">>newdemon ","")
+                                    tm = tm.split(";")
+                                    if len(tm) != 7:
+                                        Send_message(username + ", Invalid Syntax! Usage: >>newdemon name;pos;requirement;"
+                                                                "verifier;publisher;[creator1,creator2];video", username,
+                                                                messagewhisper)
+                                    else:
+                                        DLTOKEN = ""
+                                        for d in DLMODS:
+                                            if d['name'] == username:
+                                                DLTOKEN = d['access token']
+                                        ndvalid = True
+                                        NDNAME = tm[0]
+                                        NDPOS = 0
+                                        try:
+                                            NDPOS = int(tm[1])
+                                        except:
+                                            ndvalid = False
+                                            Send_message(
+                                                username + ", Invalid Position! Usage: >>newdemon name;pos;requirement;"
+                                                           "verifier;publisher;[creator1,creator2];video", username,
+                                                messagewhisper)
+                                        NDREQUIREMENT = 0
+                                        try:
+                                            NDREQUIREMENT = int(tm[2])
+                                        except:
+                                            ndvalid = False
+                                            Send_message(
+                                                username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
+                                                           "verifier;publisher;[creator1,creator2];video", username,
+                                                messagewhisper)
+                                        if NDREQUIREMENT < 1 or NDREQUIREMENT > 99:
+                                            ndvalid = False
+                                            Send_message(
+                                                username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
+                                                           "verifier;publisher;[creator1,creator2];video", username,
+                                                messagewhisper)
+                                        NDVERIFIER = tm[3]
+                                        NDPUBLISHER = tm[4]
+                                        NDCREATORS = tm[5]
+                                        if NDCREATORS[0] != "[" or NDCREATORS[len(NDCREATORS) - 1] != "]":
+                                            ndvalid = False
+                                            Send_message(
+                                                username + ", Invalid Creators! Usage: >>newdemon name;pos;requirement;"
+                                                           "verifier;publisher;[creator1,creator2];video", username,
+                                                messagewhisper)
+                                        NDCREATORS = NDCREATORS.replace("[",""); NDCREATORS = NDCREATORS.replace("]","")
+                                        NDCREATORS = NDCREATORS.split(",")
+                                        NDVIDEO = tm[6]
+                                        if not NDVIDEO.startswith("https://www.youtube.com/"):
+                                            ndvalid = False
+                                            Send_message(
+                                                username + ", Invalid Video! Usage: >>newdemon name;pos;requirement;"
+                                                           "verifier;publisher;[creator1,creator2];video", username,
+                                                messagewhisper)
+                                        if ndvalid:
+                                            ndr = POST("demons/",data={'name':NDNAME,'position':NDPOS,
+                                            'requirement':NDREQUIREMENT,'verifier':NDVERIFIER,'publisher':NDPUBLISHER,
+                                            'creators':NDCREATORS,'video':NDVIDEO},headers={'Authorization':'Bearer ' +
+                                                                                                            DLTOKEN})
+                                            if ndr is None or ndr == []:
+                                                Send_message(username + ", Invalid Request!",username,messagewhisper)
+                                            else:
+                                                Send_message(username + ", added demon " + NDNAME + "!",username,
+                                                             messagewhisper)
                     if message.startswith(">>modifydemon"):
                         if not userindlmods(username):
                             Send_message(username + ", you do not have permissions to do this!", username,
                                          messagewhisper)
                         else:
-                            if message == ">>modifydemon":
-                                Send_message("Usage: >>modifydemon position_to_modify field [new value]",username,
-                                             messagewhisper)
-                            else:
-                                tm = message.replace(">>modifydemon","")
-                                tm = tm.split(" ")
-                                if len(tm) < 3:
-                                    Send_message("Invalid Syntax! Usage: >>modifydemon position_to_modify field "
-                                                 "[new value]", username,messagewhisper)
+                            cmdpass = False
+                            if MODSONLY:
+                                if username not in MODS:
+                                    if username not in MODS and not userindlmods(username):
+                                        Send_message(username + ", you do not have permissions to do this!", username,
+                                                     messagewhisper)
                                 else:
-                                    mdvalid = True
-                                    MDPOS = tm[0]
-                                    try:
-                                        MDPOS = int(MDPOS)
-                                    except:
-                                        mdvalid = False
-                                        Send_message("Invalid Position! Usage: >>modifydemon position_to_modify field "
-                                                     "new_value", username, messagewhisper)
-                                    MDFIELD = tm[1].lower()
-                                    mdacceptable = ['name','position','video','requirement',
-                                                    'verifier','publisher','notes']
-                                    if MDFIELD not in mdacceptable:
-                                        mdvalid = False
-                                        Send_message("Invalid Field! Usage: >>modifydemon position_to_modify field "
-                                                     "new_value", username, messagewhisper)
-                                    tm.remove(tm[0]); tm.remove(tm[1])
-                                    MDVALUE = ""
-                                    for m in tm:
-                                        MDVALUE += m + " "
-                                    MDVALUE = MDVALUE[:len(MDVALUE) - 1]
-                                    if MDFIELD == "position" or MDFIELD == "requirement":
+                                    cmdpass = True
+                            else:
+                                cmdpass = True
+                            if cmdpass:
+                                if message == ">>modifydemon":
+                                    Send_message("Usage: >>modifydemon position_to_modify field [new value]",username,
+                                                 messagewhisper)
+                                else:
+                                    tm = message.replace(">>modifydemon","")
+                                    tm = tm.split(" ")
+                                    if len(tm) < 3:
+                                        Send_message("Invalid Syntax! Usage: >>modifydemon position_to_modify field "
+                                                     "[new value]", username,messagewhisper)
+                                    else:
+                                        mdvalid = True
+                                        MDPOS = tm[0]
                                         try:
-                                            MDVALUE = int(MDVALUE)
+                                            MDPOS = int(MDPOS)
                                         except:
                                             mdvalid = False
-                                            Send_message(
-                                                "Invalid Value! Usage: >>modifydemon position_to_modify field "
-                                                "new_value", username, messagewhisper)
-                                    DLTOKEN = ""
-                                    for d in DLMODS:
-                                        if d['name'] == username:
-                                            DLTOKEN = d['access token']
-                                    mdr = PATCH("records/" + str(MDPOS),data={MDFIELD:MDVALUE},
-                                        headers={'Authorization':'Bearer ' + DLTOKEN})
-                                    if mdr is None or mdr == []:
-                                        Send_message(username + ", Invalid Request!", username, messagewhisper)
-                                    else:
-                                        Send_message(username + ", Demon Modified! " + MDFIELD + ": " + str(MDVALUE),
-                                                     username,messagewhisper)
+                                            Send_message("Invalid Position! Usage: >>modifydemon position_to_modify field "
+                                                         "new_value", username, messagewhisper)
+                                        MDFIELD = tm[1].lower()
+                                        mdacceptable = ['name','position','video','requirement',
+                                                        'verifier','publisher','notes']
+                                        if MDFIELD not in mdacceptable:
+                                            mdvalid = False
+                                            Send_message("Invalid Field! Usage: >>modifydemon position_to_modify field "
+                                                         "new_value", username, messagewhisper)
+                                        tm.remove(tm[0]); tm.remove(tm[1])
+                                        MDVALUE = ""
+                                        for m in tm:
+                                            MDVALUE += m + " "
+                                        MDVALUE = MDVALUE[:len(MDVALUE) - 1]
+                                        if MDFIELD == "position" or MDFIELD == "requirement":
+                                            try:
+                                                MDVALUE = int(MDVALUE)
+                                            except:
+                                                mdvalid = False
+                                                Send_message(
+                                                    "Invalid Value! Usage: >>modifydemon position_to_modify field "
+                                                    "new_value", username, messagewhisper)
+                                        DLTOKEN = ""
+                                        for d in DLMODS:
+                                            if d['name'] == username:
+                                                DLTOKEN = d['access token']
+                                        mdr = PATCH("records/" + str(MDPOS),data={MDFIELD:MDVALUE},
+                                            headers={'Authorization':'Bearer ' + DLTOKEN})
+                                        if mdr is None or mdr == []:
+                                            Send_message(username + ", Invalid Request!", username, messagewhisper)
+                                        else:
+                                            Send_message(username + ", Demon Modified! " + MDFIELD + ": " + str(MDVALUE),
+                                                         username,messagewhisper)
                 for l in parts:
                     if "End of /NAMES list" in l:
                         MODT = True
