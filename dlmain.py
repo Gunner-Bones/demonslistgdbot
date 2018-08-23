@@ -1,4 +1,4 @@
-import socket, sys, os, ast, urllib.request, urllib.parse, json
+import socket, sys, os, ast, urllib.request, urllib.parse, json, requests
 
 try:
     tf = open("dlpass.txt","r")
@@ -35,23 +35,41 @@ s.send(("CAP REQ :twitch.tv/commands \r\n").encode("UTF-8"))
 print(NICK + "[Bot Ready]")
 print(NICK + "[Info] Channel: " + CHANNEL + ", PORT: " + str(PORT))
 
-
 # MODERATORS
 MODS = []
-ccl = "http://tmi.twitch.tv/group/user/" + CHANNEL + "/chatters"
-ccl = urllib.request.Request(ccl, headers={'User-Agent': 'Mozilla/5.0'})
-ccl = str(urllib.request.urlopen(ccl).read())
-ccmi = ccl.index("\"moderators\": ")
-ccbi = ccl.index("]")
-ccl = ccl[ccmi + 15:ccbi]
-ccl = ccl.replace("\\n","")
-ccl = ccl.replace(" ","")
-ccl = ccl.replace("\"","")
-ccl = ccl.split(",")
-MODS = ccl
+def getmods():
+    ccl = "http://tmi.twitch.tv/group/user/" + CHANNEL + "/chatters"
+    ccl = urllib.request.Request(ccl, headers={'User-Agent': 'Mozilla/5.0'})
+    ccl = str(urllib.request.urlopen(ccl).read())
+    ccmi = ccl.index("\"moderators\": ")
+    ccbi = ccl.index("]")
+    ccl = ccl[ccmi + 15:ccbi]
+    ccl = ccl.replace("\\n", "")
+    ccl = ccl.replace(" ", "")
+    ccl = ccl.replace("\"", "")
+    ccl = ccl.split(",")
+    global MODS
+    MODS = ccl
+getmods()
 
 #DEMONS LIST MODERATORS
 DLMODS = []
+
+def userindlmods(username):
+    found = False
+    for d in DLMODS:
+        if d['name'] == username:
+            found = True
+    return found
+
+# GLOBAL BOOLEANS
+MODSONLY = False
+
+# CONSTANTS
+DEMONSLISTSIZE = 0
+dls = requests.get("https://pointercrate.com/api/v1/demons?position__gt=100")
+dls = dls.json(); dls = len(dls); dls += 100
+DEMONSLISTSIZE = dls
 
 SETTINGSFILE = "dlauth.txt"
 HASSETTINGS = True
@@ -145,34 +163,42 @@ def getdlmodtoken(user):
 
 def GET(url,headers=None):
     baseurl = "https://pointercrate.com/api/v1/" + url
-    rq = None
-    if headers != None: rq = urllib.request.Request(baseurl,headers=({'User-Agent': 'Mozilla/5.0'},headers))
-    else: rq = urllib.request.Request(baseurl)
+    if headers is None: rq = requests.get(baseurl,params=({'User-Agent': 'Mozilla/5.0'}))
+    else: rq = requests.get(baseurl,params=({'User-Agent': 'Mozilla/5.0'},headers))
     try:
-        rq = str(urllib.request.urlopen(rq).read())
+        rq = rq.json()
     except Exception as e:
         print(e)
         return None
-    json.loads(rq)
+    if len(rq) == 1: return rq[0]
     return rq
 
-def POST(url,params,headers=None):
+def POST(url,data,headers=None):
     baseurl = "https://pointercrate.com/api/v1/" + url
-    rq = urllib.parse.urlencode(params)
-    if headers != None: rq = urllib.request.Request(baseurl,rq,headers=({'User-Agent': 'Mozilla/5.0'},headers))
-    else: rq = urllib.request.Request(baseurl,rq,headers={'User-Agent': 'Mozilla/5.0'})
+    if headers is None: rq = requests.post(baseurl,data=data,headers=({'User-Agent': 'Mozilla/5.0'}))
+    else: rq = requests.post(baseurl,data=data,headers=({'User-Agent': 'Mozilla/5.0'},headers))
     try:
-        rq = str(urllib.request.urlopen(rq).read())
+        rq = rq.json()
     except Exception as e:
         print(e)
         return None
-    json.loads(rq)
+    return rq
+
+def PATCH(url,data,headers=None):
+    baseurl = "https://pointercrate.com/api/v1/" + url
+    if headers is None: rq = requests.patch(baseurl,data=data,headers=({'User-Agent': 'Mozilla/5.0'}))
+    else: rq = requests.patch(baseurl,data=data,headers=({'User-Agent': 'Mozilla/5.0'},headers))
+    try:
+        rq = rq.json()
+    except Exception as e:
+        print(e)
+        return None
     return rq
 
 def formatREQUESTforTM(rqm):
     rqm = str(rqm)
     if len(rqm) > 50:
-        rqm = rqm[:50]
+        rqm = rqm[:200]
     return rqm
 
 def dltokenheader(user):
@@ -214,7 +240,6 @@ while True:
 
                 # Only works after twitch is done announcing stuff (MODT = Message of the day)
                 if MODT:
-
                     # You can add all your plain commands here
                     if message == "Hey":
                         Send_message("Welcome to the stream, " + username,username,messagewhisper)
@@ -250,7 +275,8 @@ while True:
                                     if not HASSETTINGS: dls = " for this session"
                                     Send_message(username + ", removed Access Token from " + am[1] + dls, username,messagewhisper)
                     if message.startswith(">>directGET"):
-                        if username not in MODS and username not in DLMODS:
+                        getmods()
+                        if username not in MODS and not userindlmods(username):
                             Send_message(username + ", you do not have permissions to do this!",username,messagewhisper)
                         else:
                             dm = message.split(" ")
@@ -262,6 +288,175 @@ while True:
                                     Send_message(username + ", bad response! Check your url and see console", username,messagewhisper)
                                 else:
                                     Send_message(username + ", " + formatREQUESTforTM(dmr), username,messagewhisper)
+                    if message == ">>modsonly":
+                        getmods()
+                        if username != CHANNEL:
+                            if username not in MODS and not userindlmods(username):
+                                Send_message(username + ", you do not have permissions to do this!", username,messagewhisper)
+                        else:
+                            if MODSONLY:
+                                Send_message("Commands are now Mods Only!",username,messagewhisper)
+                                MODSONLY = True
+                            else:
+                                Send_message("Commands are now for everyone!",username,messagewhisper)
+                                MODSONLY = False
+                    if message.startswith(">>demon"):
+                        cmdpass = False
+                        if MODSONLY:
+                            if username not in MODS:
+                                if username not in MODS and not userindlmods(username):
+                                    Send_message(username + ", you do not have permissions to do this!", username,messagewhisper)
+                            else: cmdpass = True
+                        else: cmdpass = True
+                        if cmdpass:
+                            tm = message.replace(">>demon ","")
+                            tmint = False
+                            try:
+                                tm = int(tm)
+                                tmint = True
+                            except:
+                                dr = GET(url="demons?name=" + tm)
+                                if dr is None or dr == []:
+                                    Send_message(username + ", no Demon found with that name on the List!",username,messagewhisper)
+                                else:
+                                    Send_message("#" + str(dr['position']) + ": " + dr['name'],username,messagewhisper)
+                            if tmint:
+                                if tm > DEMONSLISTSIZE or tm < 1:
+                                    Send_message(username + ", that number is out of range!",username,messagewhisper)
+                                else:
+                                    dr = GET(url="demons?position=" + str(tm))
+                                    if dr is None or dr == []:
+                                        Send_message(username + ", no Demon found with that position on the List!",username,messagewhisper)
+                                    else:
+                                        Send_message("#" + str(dr['position']) + ": " + dr['name'],username,messagewhisper)
+                    if message.startswith(">>newdemon"):
+                        if not userindlmods(username):
+                            Send_message(username + ", you do not have permissions to do this!", username,
+                                         messagewhisper)
+                        else:
+                            if message == ">>newdemon":
+                                Send_message("Usage: >>newdemon name;pos;requirement;verifier;publisher;"
+                                             "[creator1,creator2];video",username,messagewhisper)
+                            else:
+                                tm = message.replace(">>newdemon ","")
+                                tm = tm.split(";")
+                                if len(tm) != 7:
+                                    Send_message(username + ", Invalid Syntax! Usage: >>newdemon name;pos;requirement;"
+                                                            "verifier;publisher;[creator1,creator2];video", username,
+                                                            messagewhisper)
+                                else:
+                                    DLTOKEN = ""
+                                    for d in DLMODS:
+                                        if d['name'] == username:
+                                            DLTOKEN = d['access token']
+                                    ndvalid = True
+                                    NDNAME = tm[0]
+                                    NDPOS = 0
+                                    try:
+                                        NDPOS = int(tm[1])
+                                    except:
+                                        ndvalid = False
+                                        Send_message(
+                                            username + ", Invalid Position! Usage: >>newdemon name;pos;requirement;"
+                                                       "verifier;publisher;[creator1,creator2];video", username,
+                                            messagewhisper)
+                                    NDREQUIREMENT = 0
+                                    try:
+                                        NDREQUIREMENT = int(tm[2])
+                                    except:
+                                        ndvalid = False
+                                        Send_message(
+                                            username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
+                                                       "verifier;publisher;[creator1,creator2];video", username,
+                                            messagewhisper)
+                                    if NDREQUIREMENT < 1 or NDREQUIREMENT > 99:
+                                        ndvalid = False
+                                        Send_message(
+                                            username + ", Invalid Requirement! Usage: >>newdemon name;pos;requirement;"
+                                                       "verifier;publisher;[creator1,creator2];video", username,
+                                            messagewhisper)
+                                    NDVERIFIER = tm[3]
+                                    NDPUBLISHER = tm[4]
+                                    NDCREATORS = tm[5]
+                                    if NDCREATORS[0] != "[" or NDCREATORS[len(NDCREATORS) - 1] != "]":
+                                        ndvalid = False
+                                        Send_message(
+                                            username + ", Invalid Creators! Usage: >>newdemon name;pos;requirement;"
+                                                       "verifier;publisher;[creator1,creator2];video", username,
+                                            messagewhisper)
+                                    NDCREATORS = NDCREATORS.replace("[",""); NDCREATORS = NDCREATORS.replace("]","")
+                                    NDCREATORS = NDCREATORS.split(",")
+                                    NDVIDEO = tm[6]
+                                    if not NDVIDEO.startswith("https://www.youtube.com/"):
+                                        ndvalid = False
+                                        Send_message(
+                                            username + ", Invalid Video! Usage: >>newdemon name;pos;requirement;"
+                                                       "verifier;publisher;[creator1,creator2];video", username,
+                                            messagewhisper)
+                                    if ndvalid:
+                                        ndr = POST("demons/",data={'name':NDNAME,'position':NDPOS,
+                                        'requirement':NDREQUIREMENT,'verifier':NDVERIFIER,'publisher':NDPUBLISHER,
+                                        'creators':NDCREATORS,'video':NDVIDEO},headers={'Authorization':'Bearer ' +
+                                                                                                        DLTOKEN})
+                                        if ndr is None or ndr == []:
+                                            Send_message(username + ", Invalid Request!",username,messagewhisper)
+                                        else:
+                                            Send_message(username + ", added demon " + NDNAME + "!",username,
+                                                         messagewhisper)
+                    if message.startswith(">>modifydemon"):
+                        if not userindlmods(username):
+                            Send_message(username + ", you do not have permissions to do this!", username,
+                                         messagewhisper)
+                        else:
+                            if message == ">>modifydemon":
+                                Send_message("Usage: >>modifydemon position_to_modify field [new value]",username,
+                                             messagewhisper)
+                            else:
+                                tm = message.replace(">>modifydemon","")
+                                tm = tm.split(" ")
+                                if len(tm) < 3:
+                                    Send_message("Invalid Syntax! Usage: >>modifydemon position_to_modify field "
+                                                 "[new value]", username,messagewhisper)
+                                else:
+                                    mdvalid = True
+                                    MDPOS = tm[0]
+                                    try:
+                                        MDPOS = int(MDPOS)
+                                    except:
+                                        mdvalid = False
+                                        Send_message("Invalid Position! Usage: >>modifydemon position_to_modify field "
+                                                     "new_value", username, messagewhisper)
+                                    MDFIELD = tm[1].lower()
+                                    mdacceptable = ['name','position','video','requirement',
+                                                    'verifier','publisher','notes']
+                                    if MDFIELD not in mdacceptable:
+                                        mdvalid = False
+                                        Send_message("Invalid Field! Usage: >>modifydemon position_to_modify field "
+                                                     "new_value", username, messagewhisper)
+                                    tm.remove(tm[0]); tm.remove(tm[1])
+                                    MDVALUE = ""
+                                    for m in tm:
+                                        MDVALUE += m + " "
+                                    MDVALUE = MDVALUE[:len(MDVALUE) - 1]
+                                    if MDFIELD == "position" or MDFIELD == "requirement":
+                                        try:
+                                            MDVALUE = int(MDVALUE)
+                                        except:
+                                            mdvalid = False
+                                            Send_message(
+                                                "Invalid Value! Usage: >>modifydemon position_to_modify field "
+                                                "new_value", username, messagewhisper)
+                                    DLTOKEN = ""
+                                    for d in DLMODS:
+                                        if d['name'] == username:
+                                            DLTOKEN = d['access token']
+                                    mdr = PATCH("records/" + str(MDPOS),data={MDFIELD:MDVALUE},
+                                        headers={'Authorization':'Bearer ' + DLTOKEN})
+                                    if mdr is None or mdr == []:
+                                        Send_message(username + ", Invalid Request!", username, messagewhisper)
+                                    else:
+                                        Send_message(username + ", Demon Modified! " + MDFIELD + ": " + str(MDVALUE),
+                                                     username,messagewhisper)
                 for l in parts:
                     if "End of /NAMES list" in l:
                         MODT = True
